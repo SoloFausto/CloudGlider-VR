@@ -275,10 +275,58 @@
                                     }
                                 });
 
-                                // Remove the observer when the game ends or scene disposes
+                                // Add camera movement based on hand direction
+                                const cameraMovementSpeed = 2; // Adjust speed as needed
+                                const cameraMovement = scene.onBeforeRenderObservable.add(() => {
+                                    // Only move camera if game has started
+                                    if (!gameStarted) return;
+                                    
+                                    // Look for the right controller (same as airplane control)
+                                    const rightController = xr.input.controllers.find(
+                                        controller => controller.inputSource.handedness === 'right'
+                                    );
+                                    
+                                    if (rightController && rightController.pointer) {
+                                        // Get the direction the controller is pointing
+                                        const controllerDirection = new BABYLON.Vector3();
+                                        
+                                        if (rightController.pointer.rotationQuaternion) {
+                                            // Create a forward vector (0,0,1) and rotate it by the controller's rotation
+                                            const forwardVector = new BABYLON.Vector3(0, 0, 1);
+                                            forwardVector.rotateByQuaternionToRef(
+                                                rightController.pointer.rotationQuaternion, 
+                                                controllerDirection
+                                            );
+                                            
+                                            // Normalize the direction vector
+                                            controllerDirection.normalize();
+                                            
+                                            // Get the current camera position from the XR camera
+                                            const xrCamera = xr.baseExperience.camera;
+                                           
+                                            
+                                            
+                                            // Move the camera in the direction the controller is pointing
+                                            xrCamera.position.addInPlace(
+                                                controllerDirection.scale(cameraMovementSpeed)
+                                            );
+                                            
+                                            // Safety limits: prevent going below ground level
+                                            const minimumHeight = 1.0; // Minimum height above ground
+                                            if (xrCamera.position.y < minimumHeight) {
+                                                xrCamera.position.y = minimumHeight;
+                                            }
+                                        }
+                                    }
+                                });
+
+                                // Remove both observers when the scene disposes
                                 scene.onDisposeObservable.add(() => {
                                     if (controllerTracker) {
                                         scene.onBeforeRenderObservable.remove(controllerTracker);
+                                    }
+                                    if (cameraMovement) {
+                                        scene.onBeforeRenderObservable.remove(cameraMovement);
                                     }
                                 });
                             });
