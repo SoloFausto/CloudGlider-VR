@@ -119,88 +119,183 @@
             BABYLON.WebXRDefaultExperience.CreateAsync(scene).then((xr) => {
                 console.log("WebXR enabled");
                 
-                // Create a temporary airplane mesh while loading the model
-                const tempAirplane = BABYLON.Mesh.CreateBox("tempAirplane", 1, scene);
+                // Create a variable to track if the game has started
+                let gameStarted = false;
+                
+                // Variable to store the airplane root mesh
+                let airplaneRoot = null;
+                
+                // Add teleportation and basic VR setup
+                const featuresManager = xr.baseExperience.featuresManager;
+                
+                // Enable required WebXR features
+                featuresManager.enableFeature(BABYLON.WebXRFeatureName.POINTER_SELECTION, "stable", {
+                    xrInput: xr.input,
+                    enablePointerSelectionOnAllControllers: true
+                });
 
-                // Load the airplane model
-                BABYLON.SceneLoader.ImportMesh("", "resources/airplane/", "airplane.obj", scene, function (meshes) {
-                    // Assume the first mesh is the main airplane body
-                    const airplaneRoot = meshes[0];
-                    airplaneRoot.scaling = new BABYLON.Vector3(0.0004, 0.0004, 0.0004); // Apply scaling to the root
-                    airplaneRoot.castShadows = false; // Disable shadows for the root
+                // Create start button that will be visible in VR
+                xr.baseExperience.onStateChangedObservable.add((state) => {
+                    if (state === BABYLON.WebXRState.IN_XR) {
+                        // Create button when VR session starts
+                        const startButtonPlane = BABYLON.MeshBuilder.CreatePlane("startButton", {width: 1, height: 0.5}, scene);
+                        startButtonPlane.position = new BABYLON.Vector3(0, 1, -8); // Better position in front of user
+                        
+                        // Create a dark gray material for the button
+                        const buttonMaterial = new BABYLON.StandardMaterial("buttonMaterial", scene);
+                        buttonMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2); // Dark gray
+                        buttonMaterial.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Subtle glow
+                        buttonMaterial.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3); // More prominent specular
+                        startButtonPlane.material = buttonMaterial;
+                        
+                        // Add text to the button
+                        const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(startButtonPlane);
+                        
+                        // Create a dark gray background rectangle
+                        const backgroundRect = new BABYLON.GUI.Rectangle();
+                        backgroundRect.width = 0.9;
+                        backgroundRect.height = 0.8;
+                        backgroundRect.cornerRadius = 20;
+                        backgroundRect.color = "white";
+                        backgroundRect.thickness = 2;
+                        backgroundRect.background = "#333333"; // Dark gray background
+                        advancedTexture.addControl(backgroundRect);
+                        
+                        const buttonText = new BABYLON.GUI.TextBlock();
+                        buttonText.text = "START GAME";
+                        buttonText.color = "white";
+                        buttonText.fontSize = 160; // Even larger font
+                        buttonText.outlineWidth = 3; // Thicker outline
+                        buttonText.outlineColor = "black";
+                        advancedTexture.addControl(buttonText);
+                        
+                        // Create button animation to make it more noticeable
+                        const frameRate = 30;
+                        const easingFunction = new BABYLON.SineEase();
+                        easingFunction.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+                        
+                        const scaleAnim = new BABYLON.Animation("buttonScale", "scaling", frameRate, 
+                            BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+                        
+                        const keyFrames = []; 
+                        keyFrames.push({frame: 0, value: new BABYLON.Vector3(1, 1, 1)});
+                        keyFrames.push({frame: frameRate, value: new BABYLON.Vector3(1.1, 1.1, 1.1)});
+                        keyFrames.push({frame: 2 * frameRate, value: new BABYLON.Vector3(1, 1, 1)});
+                        
+                        scaleAnim.setKeys(keyFrames);
+                        scaleAnim.setEasingFunction(easingFunction);
+                        startButtonPlane.animations = [scaleAnim];
+                        scene.beginAnimation(startButtonPlane, 0, 2 * frameRate, true);
+                        
+                        // Function to load the airplane
+                        const loadAirplane = () => {
+                            if (gameStarted) return; // Don't load again if already started
+                            
+                            gameStarted = true;
+                            buttonMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5); // Gray out the button
+                            buttonText.text = "GAME STARTED";
+                            
+                            // Stop the animation
+                            scene.stopAnimation(startButtonPlane);
+                            startButtonPlane.dispose();
+                            
+                            // Load the airplane model
+                            BABYLON.SceneLoader.ImportMesh("", "resources/airplane/", "airplane.obj", scene, function (meshes) {
+                                // Assume the first mesh is the main airplane body
+                                airplaneRoot = meshes[0];
+                                airplaneRoot.scaling = new BABYLON.Vector3(0.0004, 0.0004, 0.0004); // Apply scaling to the root
+                                airplaneRoot.castShadows = false; // Disable shadows for the root
 
-                    // Set the rotation offsets in degrees for all three axes
-                    const rotationOffsetX = 90; // Rotation around X-axis (pitch)
-                    const rotationOffsetY = 180;  // Rotation around Y-axis (yaw)
-                    const rotationOffsetZ = 90;  // Rotation around Z-axis (roll)
-                    
-                    // Remove the temporary airplane
-                    tempAirplane.dispose();
-                    
-                    // Create a custom material for the airplane body
-                    const airplaneMaterial = new BABYLON.StandardMaterial("airplaneMaterial", scene);
-                    airplaneMaterial.diffuseTexture = new BABYLON.Texture("resources/airplane/blue_airplane_texture.jpg", scene);
-                    airplaneMaterial.specularColor = new BABYLON.Color3(1.2, 1.2, 1.2);
-                    airplaneMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-                    airplaneMaterial.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+                                // Set the rotation offsets in degrees for all three axes
+                                const rotationOffsetX = 90; // Rotation around X-axis (pitch)
+                                const rotationOffsetY = 180;  // Rotation around Y-axis (yaw)
+                                const rotationOffsetZ = 90;  // Rotation around Z-axis (roll)
+                                
+                                // Create a custom material for the airplane body
+                                const airplaneMaterial = new BABYLON.StandardMaterial("airplaneMaterial", scene);
+                                airplaneMaterial.diffuseTexture = new BABYLON.Texture("resources/airplane/blue_airplane_texture.jpg", scene);
+                                airplaneMaterial.specularColor = new BABYLON.Color3(1.2, 1.2, 1.2);
+                                airplaneMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+                                airplaneMaterial.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
 
-                    // Create a custom material for the windows
-                    const windowMaterial = new BABYLON.StandardMaterial("windowMaterial", scene);
-                    windowMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.7, 1.0); // Light blue color
-                    windowMaterial.alpha = 0.7; // Make windows slightly transparent
-                    windowMaterial.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8); // Add some reflectivity
+                                // Create a custom material for the windows
+                                const windowMaterial = new BABYLON.StandardMaterial("windowMaterial", scene);
+                                windowMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.7, 1.0); // Light blue color
+                                windowMaterial.alpha = 0.7; // Make windows slightly transparent
+                                windowMaterial.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8); // Add some reflectivity
 
-                    // Apply material and settings to all loaded meshes
-                    meshes.forEach(mesh => {
-                        mesh.castShadows = false; // Disable shadows for all parts
-                        if (mesh === airplaneRoot) {
-                            mesh.material = airplaneMaterial; // Apply body material to the root
-                        } else {
-                            mesh.material = windowMaterial; // Apply window material to other parts
-                            mesh.parent = airplaneRoot; // Parent child meshes to the root
-                        }
-                    });
-                    
-                    // Set up hand tracking for the root mesh
-                    xr.input.onControllerAddedObservable.add((controller) => {
-                        if (controller.inputSource.handedness === 'right') {
-                            // Update airplane position and rotation based on controller
-                            scene.registerBeforeRender(() => {
-                                const controllerPose = controller.pointer;
-                                if (controllerPose) {
-                                    // Update position of the root mesh
-                                    airplaneRoot.position = controllerPose.position;
-                                    
-                                    // Update rotation of the root mesh
-                                    const rotationQuaternion = controllerPose.rotationQuaternion;
-                                    if (rotationQuaternion) {
-                                        // Apply the controller's rotation
-                                        airplaneRoot.rotationQuaternion = rotationQuaternion;
-                                        
-                                        // Add rotations around all three axes
-                                        const rotationX = BABYLON.Quaternion.RotationAxis(
-                                            BABYLON.Vector3.Right(),
-                                            BABYLON.Tools.ToRadians(rotationOffsetX)
-                                        );
-                                        const rotationY = BABYLON.Quaternion.RotationAxis(
-                                            BABYLON.Vector3.Up(),
-                                            BABYLON.Tools.ToRadians(rotationOffsetY)
-                                        );
-                                        const rotationZ = BABYLON.Quaternion.RotationAxis(
-                                            BABYLON.Vector3.Forward(),
-                                            BABYLON.Tools.ToRadians(rotationOffsetZ)
-                                        );
-                                        
-                                        // Combine all rotations
-                                        airplaneRoot.rotationQuaternion = airplaneRoot.rotationQuaternion
-                                            .multiply(rotationX)
-                                            .multiply(rotationY)
-                                            .multiply(rotationZ);
+                                // Apply material and settings to all loaded meshes
+                                meshes.forEach(mesh => {
+                                    mesh.castShadows = false; // Disable shadows for all parts
+                                    if (mesh === airplaneRoot) {
+                                        mesh.material = airplaneMaterial; // Apply body material to the root
+                                    } else {
+                                        mesh.material = windowMaterial; // Apply window material to other parts
+                                        mesh.parent = airplaneRoot; // Parent child meshes to the root
                                     }
-                                }
+                                });
+                                
+                                // Set up hand tracking for the root mesh
+                                const controllerTracker = scene.onBeforeRenderObservable.add(() => {
+                                    // Look for the right controller
+                                    const rightController = xr.input.controllers.find(
+                                        controller => controller.inputSource.handedness === 'right'
+                                    );
+                                    
+                                    // If we have both the controller and the airplane
+                                    if (rightController && rightController.pointer && airplaneRoot) {
+                                        // Update position of the root mesh
+                                        airplaneRoot.position = rightController.pointer.position;
+                                        
+                                        // Update rotation of the root mesh
+                                        if (rightController.pointer.rotationQuaternion) {
+                                            // Create a new quaternion to avoid reference issues
+                                            airplaneRoot.rotationQuaternion = rightController.pointer.rotationQuaternion.clone();
+                                            
+                                            // Add rotations around all three axes
+                                            const rotationX = BABYLON.Quaternion.RotationAxis(
+                                                BABYLON.Vector3.Right(),
+                                                BABYLON.Tools.ToRadians(rotationOffsetX)
+                                            );
+                                            const rotationY = BABYLON.Quaternion.RotationAxis(
+                                                BABYLON.Vector3.Up(),
+                                                BABYLON.Tools.ToRadians(rotationOffsetY)
+                                            );
+                                            const rotationZ = BABYLON.Quaternion.RotationAxis(
+                                                BABYLON.Vector3.Forward(),
+                                                BABYLON.Tools.ToRadians(rotationOffsetZ)
+                                            );
+                                            
+                                            // Combine all rotations
+                                            airplaneRoot.rotationQuaternion = airplaneRoot.rotationQuaternion
+                                                .multiply(rotationX)
+                                                .multiply(rotationY)
+                                                .multiply(rotationZ);
+                                        }
+                                    }
+                                });
+
+                                // Remove the observer when the game ends or scene disposes
+                                scene.onDisposeObservable.add(() => {
+                                    if (controllerTracker) {
+                                        scene.onBeforeRenderObservable.remove(controllerTracker);
+                                    }
+                                });
                             });
-                        }
-                    });
+                        };
+                        
+                        // Set up Near Interaction
+                        startButtonPlane.isPickable = true;
+                        
+                        // Add interactions to the button (for VR controllers)
+                        startButtonPlane.actionManager = new BABYLON.ActionManager(scene);
+                        startButtonPlane.actionManager.registerAction(
+                            new BABYLON.ExecuteCodeAction(
+                                BABYLON.ActionManager.OnPickTrigger,
+                                loadAirplane
+                            )
+                        );
+                    }
                 });
             });
 
