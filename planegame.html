@@ -262,6 +262,9 @@
                             "poste": 0     // Postes remain at ground level
                         };
 
+                        // Create array to track all obstacles for collision detection
+                        const obstacles = [];
+
                         obstacleTypes.forEach(type => {
                             const prototype = obstaclePrototypes[type.name];
                             if (!prototype) return; // Skip if prototype wasn't loaded
@@ -295,20 +298,26 @@
                                 obstacleInstance.getChildMeshes().forEach(child => {
                                     child.setEnabled(true);
                                 });
+                                
+                                // Add to obstacles array for collision detection
+                                obstacles.push(obstacleInstance);
                             }
                         });
+                        
+                        return obstacles;
                     };
 
                     // Track loading progress
                     let airplaneLoaded = false;
                     let obstaclesLoadedCount = 0;
                     const totalObstacleTypes = obstacleTypes.length;
+                    let obstacles = []; // Array to store all obstacles
 
                     // Function to check if all assets are loaded
                     const checkAssetsAndStart = () => {
                         if (airplaneLoaded && obstaclesLoadedCount === totalObstacleTypes) {
                             console.log("All assets loaded, placing obstacles");
-                            placeObstacles();
+                            obstacles = placeObstacles();
                         }
                     };
 
@@ -400,6 +409,61 @@
                                     }
                                 }
                                 // --- End Pinch Detection ---
+                                
+                                // Check for collisions with obstacles
+                                if (gameStarted && obstacles.length > 0) {
+                                    // Create a bounding box for the airplane
+                                    const boundingInfo = airplaneRoot.getBoundingInfo();
+                                    const minBounds = boundingInfo.boundingBox.minimumWorld;
+                                    const maxBounds = boundingInfo.boundingBox.maximumWorld;
+                                    
+                                    // Calculate a simplified collision sphere
+                                    const airplaneCenter = airplaneRoot.position;
+                                    // Calculate radius based on average of the bounds dimensions
+                                    const boundsDimensions = maxBounds.subtract(minBounds);
+                                    const collisionRadius = (boundsDimensions.x + boundsDimensions.y + boundsDimensions.z) / 6;
+                                    
+                                    // Check collision with each obstacle
+                                    for (let i = 0; i < obstacles.length; i++) {
+                                        const obstacle = obstacles[i];
+                                        if (!obstacle.isEnabled()) continue; // Skip disabled obstacles
+                                        
+                                        // Get obstacle bounding info
+                                        const obstacleBoundingInfo = obstacle.getBoundingInfo();
+                                        const obstacleMinBounds = obstacleBoundingInfo.boundingBox.minimumWorld;
+                                        const obstacleMaxBounds = obstacleBoundingInfo.boundingBox.maximumWorld;
+                                        
+                                        // Calculate obstacle center
+                                        const obstacleCenter = obstacle.position;
+                                        // Calculate radius based on average of the bounds dimensions
+                                        const obstacleBoundsDimensions = obstacleMaxBounds.subtract(obstacleMinBounds);
+                                        const obstacleRadius = (obstacleBoundsDimensions.x + obstacleBoundsDimensions.y + obstacleBoundsDimensions.z) / 6;
+                                        
+                                        // Simplified sphere-sphere collision check
+                                        const distance = BABYLON.Vector3.Distance(airplaneCenter, obstacleCenter);
+                                        if (distance < (collisionRadius + obstacleRadius)) {
+                                            console.log(`Collision detected with ${obstacle.name}`);
+                                            
+                                            // Visual feedback for collision - keep obstacle red permanently
+                                            const collisionMaterial = new BABYLON.StandardMaterial("collisionMaterial", scene);
+                                            collisionMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0); // Red color
+                                            collisionMaterial.emissiveColor = new BABYLON.Color3(0.5, 0, 0); // Red glow
+                                            
+                                            // Apply the material to the obstacle and all its children
+                                            obstacle.material = collisionMaterial;
+                                            
+                                            // Apply material to all child meshes to ensure vallas and other complex objects turn red
+                                            obstacle.getChildMeshes().forEach(child => {
+                                                child.material = collisionMaterial;
+                                            });
+                                            
+                                            // Remove the timeout that was making obstacles disappear
+                                            // setTimeout(() => {
+                                            //     obstacle.setEnabled(false);
+                                            // }, 500); // Half second delay before disabling
+                                        }
+                                    }
+                                }
                             }
                         });
 
