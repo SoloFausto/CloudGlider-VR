@@ -120,15 +120,15 @@
                 console.log("WebXR enabled");
                 
                 // Create a temporary airplane mesh while loading the model
-                const tempAirplane = BABYLON.Mesh.CreateBox("tempAirplane", {size: 1}, scene);
-                tempAirplane.scaling = new BABYLON.Vector3(0.0004, 0.0001, 0.0001); // 100x smaller
-                tempAirplane.rotation.x = Math.PI / 2;
-                
+                const tempAirplane = BABYLON.Mesh.CreateBox("tempAirplane", 1, scene);
+
                 // Load the airplane model
                 BABYLON.SceneLoader.ImportMesh("", "resources/airplane/", "airplane.obj", scene, function (meshes) {
-                    const airplane = meshes[0];
-                    airplane.scaling = new BABYLON.Vector3(0.0004, 0.0004, 0.0004); // 100x smaller
-                    
+                    // Assume the first mesh is the main airplane body
+                    const airplaneRoot = meshes[0];
+                    airplaneRoot.scaling = new BABYLON.Vector3(0.0004, 0.0004, 0.0004); // Apply scaling to the root
+                    airplaneRoot.castShadows = false; // Disable shadows for the root
+
                     // Set the rotation offsets in degrees for all three axes
                     const rotationOffsetX = 90; // Rotation around X-axis (pitch)
                     const rotationOffsetY = 180;  // Rotation around Y-axis (yaw)
@@ -137,33 +137,45 @@
                     // Remove the temporary airplane
                     tempAirplane.dispose();
                     
-                    // Create a custom material with the blue texture
+                    // Create a custom material for the airplane body
                     const airplaneMaterial = new BABYLON.StandardMaterial("airplaneMaterial", scene);
                     airplaneMaterial.diffuseTexture = new BABYLON.Texture("resources/airplane/blue_airplane_texture.jpg", scene);
                     airplaneMaterial.specularColor = new BABYLON.Color3(1.2, 1.2, 1.2);
                     airplaneMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
                     airplaneMaterial.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
-                    
-                    // Apply the material to the airplane
-                    airplane.material = airplaneMaterial;
-                    
 
+                    // Create a custom material for the windows
+                    const windowMaterial = new BABYLON.StandardMaterial("windowMaterial", scene);
+                    windowMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.7, 1.0); // Light blue color
+                    windowMaterial.alpha = 0.7; // Make windows slightly transparent
+                    windowMaterial.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8); // Add some reflectivity
+
+                    // Apply material and settings to all loaded meshes
+                    meshes.forEach(mesh => {
+                        mesh.castShadows = false; // Disable shadows for all parts
+                        if (mesh === airplaneRoot) {
+                            mesh.material = airplaneMaterial; // Apply body material to the root
+                        } else {
+                            mesh.material = windowMaterial; // Apply window material to other parts
+                            mesh.parent = airplaneRoot; // Parent child meshes to the root
+                        }
+                    });
                     
-                    // Set up hand tracking
+                    // Set up hand tracking for the root mesh
                     xr.input.onControllerAddedObservable.add((controller) => {
                         if (controller.inputSource.handedness === 'right') {
                             // Update airplane position and rotation based on controller
                             scene.registerBeforeRender(() => {
                                 const controllerPose = controller.pointer;
                                 if (controllerPose) {
-                                    // Update position
-                                    airplane.position = controllerPose.position;
+                                    // Update position of the root mesh
+                                    airplaneRoot.position = controllerPose.position;
                                     
-                                    // Update rotation to align with index finger direction
+                                    // Update rotation of the root mesh
                                     const rotationQuaternion = controllerPose.rotationQuaternion;
                                     if (rotationQuaternion) {
                                         // Apply the controller's rotation
-                                        airplane.rotationQuaternion = rotationQuaternion;
+                                        airplaneRoot.rotationQuaternion = rotationQuaternion;
                                         
                                         // Add rotations around all three axes
                                         const rotationX = BABYLON.Quaternion.RotationAxis(
@@ -180,7 +192,7 @@
                                         );
                                         
                                         // Combine all rotations
-                                        airplane.rotationQuaternion = airplane.rotationQuaternion
+                                        airplaneRoot.rotationQuaternion = airplaneRoot.rotationQuaternion
                                             .multiply(rotationX)
                                             .multiply(rotationY)
                                             .multiply(rotationZ);
