@@ -14,3 +14,5 @@ I chose to start this project as a solo developer with only 16 hours left in the
 That when faced with the option between doing something that I wasn't passionate about or go with my own gut feeling, the latter option will be infinitely more rewarding.
 ## What's next for CloudGlider VR
 Implementing the Arcade mode, possibly some showcases to my friends and clubs at Colgate University, and possibly a fork made for large scale projections and integrate it in an installation.
+## Running it
+It is a single HTML file that can be served from any HTTPS server, I used reverse port-forwarding on my Meta Quest 3 to access the served file from a node server.
