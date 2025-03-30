@@ -272,6 +272,17 @@
                                                 .multiply(rotationY)
                                                 .multiply(rotationZ);
                                         }
+
+                                        // --- Pinch Detection ---
+                                        // Check if the game has started before checking for pinch
+                                        if (gameStarted && rightController.inputSource.gamepad) {
+                                            // Check for pinch gesture (assuming 'select' action - button index 0 - corresponds to pinch)
+                                            const pinchButton = rightController.inputSource.gamepad.buttons[0]; 
+                                            if (pinchButton && pinchButton.pressed) {
+                                                console.log("Right hand pinching!");
+                                            }
+                                        }
+                                        // --- End Pinch Detection ---
                                     }
                                 });
 
