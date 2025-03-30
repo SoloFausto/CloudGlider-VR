@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Babylon.js VR Scene</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; }
         #renderCanvas { width: 100vw; height: 100vh; display: block; }
@@ -116,6 +118,78 @@
             // WebXR Default Experience
             BABYLON.WebXRDefaultExperience.CreateAsync(scene).then((xr) => {
                 console.log("WebXR enabled");
+                
+                // Create a temporary airplane mesh while loading the model
+                const tempAirplane = BABYLON.Mesh.CreateBox("tempAirplane", {size: 1}, scene);
+                tempAirplane.scaling = new BABYLON.Vector3(0.0004, 0.0001, 0.0001); // 100x smaller
+                tempAirplane.rotation.x = Math.PI / 2;
+                
+                // Load the airplane model
+                BABYLON.SceneLoader.ImportMesh("", "resources/airplane/", "airplane.obj", scene, function (meshes) {
+                    const airplane = meshes[0];
+                    airplane.scaling = new BABYLON.Vector3(0.0004, 0.0004, 0.0004); // 100x smaller
+                    
+                    // Set the rotation offsets in degrees for all three axes
+                    const rotationOffsetX = 90; // Rotation around X-axis (pitch)
+                    const rotationOffsetY = 180;  // Rotation around Y-axis (yaw)
+                    const rotationOffsetZ = 90;  // Rotation around Z-axis (roll)
+                    
+                    // Remove the temporary airplane
+                    tempAirplane.dispose();
+                    
+                    // Create a custom material with the blue texture
+                    const airplaneMaterial = new BABYLON.StandardMaterial("airplaneMaterial", scene);
+                    airplaneMaterial.diffuseTexture = new BABYLON.Texture("resources/airplane/blue_airplane_texture.jpg", scene);
+                    airplaneMaterial.specularColor = new BABYLON.Color3(1.2, 1.2, 1.2);
+                    airplaneMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+                    airplaneMaterial.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+                    
+                    // Apply the material to the airplane
+                    airplane.material = airplaneMaterial;
+                    
+
+                    
+                    // Set up hand tracking
+                    xr.input.onControllerAddedObservable.add((controller) => {
+                        if (controller.inputSource.handedness === 'right') {
+                            // Update airplane position and rotation based on controller
+                            scene.registerBeforeRender(() => {
+                                const controllerPose = controller.pointer;
+                                if (controllerPose) {
+                                    // Update position
+                                    airplane.position = controllerPose.position;
+                                    
+                                    // Update rotation to align with index finger direction
+                                    const rotationQuaternion = controllerPose.rotationQuaternion;
+                                    if (rotationQuaternion) {
+                                        // Apply the controller's rotation
+                                        airplane.rotationQuaternion = rotationQuaternion;
+                                        
+                                        // Add rotations around all three axes
+                                        const rotationX = BABYLON.Quaternion.RotationAxis(
+                                            BABYLON.Vector3.Right(),
+                                            BABYLON.Tools.ToRadians(rotationOffsetX)
+                                        );
+                                        const rotationY = BABYLON.Quaternion.RotationAxis(
+                                            BABYLON.Vector3.Up(),
+                                            BABYLON.Tools.ToRadians(rotationOffsetY)
+                                        );
+                                        const rotationZ = BABYLON.Quaternion.RotationAxis(
+                                            BABYLON.Vector3.Forward(),
+                                            BABYLON.Tools.ToRadians(rotationOffsetZ)
+                                        );
+                                        
+                                        // Combine all rotations
+                                        airplane.rotationQuaternion = airplane.rotationQuaternion
+                                            .multiply(rotationX)
+                                            .multiply(rotationY)
+                                            .multiply(rotationZ);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                });
             });
 
             return scene;
