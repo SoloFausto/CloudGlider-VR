@@ -19,6 +19,7 @@
         const createScene = function() {
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color3(0.7, 0.8, 1); // Blue sky
+            const gl = new BABYLON.GlowLayer("glow", scene);
 
             // Camera
             const camera = new BABYLON.UniversalCamera("UniversalCamera", new BABYLON.Vector3(0, 5, -10), scene);
@@ -28,7 +29,7 @@
             // Enable fog in the scene
             scene.fogMode = BABYLON.Scene.FOGMODE_EXP2; // Exponential squared fog
             scene.fogColor = new BABYLON.Color3(0.7, 0.8, 1); // Match the sky color
-            scene.fogDensity = 0.0002; // Adjust density for the desired effect
+            scene.fogDensity = 0.0008; // Adjust density for the desired effect
 
 
             // Light
@@ -47,7 +48,6 @@
             // Ground Material
             const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
             groundMaterial.diffuseColor = new BABYLON.Color3(0, 0.8, 0); // Green
-            // groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0); // Remove specular highlights
             groundMaterial.backFaceCulling = false; // Ensure both sides are rendered
             ground.material = groundMaterial;
 
@@ -58,8 +58,26 @@
             const sun = BABYLON.Mesh.CreateSphere("sun", 320, 200, scene);
             sun.position = new BABYLON.Vector3(1000, 1000, 0);
             const sunMaterial = new BABYLON.StandardMaterial("sunMaterial", scene);
-            sunMaterial.emissiveColor = new BABYLON.Color3(1, 1, 0); // Yellow
+            sunMaterial.emissiveColor = new BABYLON.Color3(1, 1, 0.6); // Bright yellow-white
+            sunMaterial.diffuseColor = new BABYLON.Color3(1, 1, 0.8); // Match emissive
+            sunMaterial.specularColor = new BABYLON.Color3(1, 1, 0.8); // Add specular highlights
+            sunMaterial.ambientColor = new BABYLON.Color3(1, 1, 0.8); // Add ambient glow
+            sunMaterial.disableLighting = true; // Make it unaffected by scene lighting
+            sunMaterial.alpha = 1.0; // Ensure full opacity
             sun.material = sunMaterial;
+            gl.addIncludedOnlyMesh(sun);
+
+
+            // Add a glow effect to the sun
+            const sunGlow = BABYLON.Mesh.CreateSphere("sunGlow", 340, 200, scene);
+            sunGlow.position = sun.position;
+            const sunGlowMaterial = new BABYLON.StandardMaterial("sunGlowMaterial", scene);
+            sunGlowMaterial.emissiveColor = new BABYLON.Color3(1, 1, 0.4); // Yellow glow
+            sunGlowMaterial.alpha = 0.3; // Make it semi-transparent
+            sunGlowMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+            sunGlowMaterial.disableLighting = true; // Make it unaffected by scene lighting
+            sunGlow.material = sunGlowMaterial;
+
             light.includedOnlyMeshes.push(sun); // Ensure the sun casts light
 
            // Clouds (using points and billboards for simplicity)
@@ -91,7 +109,7 @@
                 cloudMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1); // Bright white color
                 cloudMaterial.alpha = 0.5; // Adjust transparency
                 cloudMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; // Enable alpha blending
-                cloudMaterial.backFaceCulling = false; // Render both sides of the plane
+                cloudMaterial.backFaceCulling = true; // Render both sides of the plane
                 cloud.material = cloudMaterial;
             }
 
