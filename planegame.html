@@ -287,28 +287,105 @@
                                     );
                                     
                                     if (rightController && rightController.pointer) {
-                                        // Get the direction the controller is pointing
-                                        const controllerDirection = new BABYLON.Vector3();
-                                        
                                         if (rightController.pointer.rotationQuaternion) {
-                                            // Create a forward vector (0,0,1) and rotate it by the controller's rotation
-                                            const forwardVector = new BABYLON.Vector3(0, 0, 1);
-                                            forwardVector.rotateByQuaternionToRef(
-                                                rightController.pointer.rotationQuaternion, 
-                                                controllerDirection
-                                            );
-                                            
-                                            // Normalize the direction vector
-                                            controllerDirection.normalize();
-                                            
                                             // Get the current camera position from the XR camera
                                             const xrCamera = xr.baseExperience.camera;
-                                           
                                             
+                                            // Create a temporary matrix to extract Euler angles
+                                            const tempMatrix = new BABYLON.Matrix();
+                                            rightController.pointer.rotationQuaternion.toRotationMatrix(tempMatrix);
+                                            const rotation = BABYLON.Vector3.Zero();
+                                            tempMatrix.decompose(BABYLON.Vector3.Zero(), rotation);
                                             
-                                            // Move the camera in the direction the controller is pointing
+                                            // Extract pitch, yaw, roll in radians
+                                            const pitch = rotation.x; // X rotation (up/down)
+                                            const yaw = rotation.y;   // Y rotation (left/right)
+                                            const roll = rotation.z;  // Z rotation (banking)
+                                            
+                                            // Create movement direction based on hand orientation
+                                            // Forward direction is always present (constant forward movement)
+                                            const forwardVector = new BABYLON.Vector3(0, 0, 1);
+                                            const forwardDirection = new BABYLON.Vector3();
+                                            forwardVector.rotateByQuaternionToRef(
+                                                rightController.pointer.rotationQuaternion,
+                                                forwardDirection
+                                            );
+                                            
+                                            // Calculate movement vector based on plane physics:
+                                            // 1. Pitch controls up/down movement
+                                            // 2. Yaw controls left/right turning
+                                            // 3. Roll (banking) influences turning
+                                            
+                                            // Calculate final movement direction
+                                            // Start with forward movement
+                                            const movementDirection = forwardDirection.clone();
+                                            
+                                            // Apply pitch influence (up/down)
+                                            // Pitch forward (negative) moves down, pitch back (positive) moves up
+                                            movementDirection.y += Math.sin(pitch) * 0.8;
+                                            
+                                            // Apply yaw influence (left/right turning)
+                                            // Direct yaw influence
+                                            const yawFactor = Math.sin(yaw) * 0.4;
+                                            movementDirection.x += yawFactor;
+                                            
+                                            // Apply roll influence (banking causes turning)
+                                            // Banking left (negative roll) turns left, banking right (positive roll) turns right
+                                            // Make roll the primary turning mechanism, with a stronger influence
+                                            // Use a non-linear response curve for more natural control
+                                            let rollResponse;
+                                            if (Math.abs(roll) < 0.3) {
+                                                // More sensitive at small angles for fine control
+                                                rollResponse = roll * 2.5;
+                                            } else {
+                                                // Gradually less sensitive at larger angles to prevent over-control
+                                                const direction = Math.sign(roll);
+                                                rollResponse = direction * (0.75 + Math.min(Math.abs(roll), 1.5) * 0.5);
+                                            }
+                                            const rollFactor = -rollResponse * 1.5;
+                                            movementDirection.x += rollFactor;
+                                            
+                                            // Apply coordinated turn physics - banking affects vertical movement
+                                            // When banking, we need to pull up slightly to maintain altitude in a turn
+                                            // This simulates how pilots handle coordinated turns
+                                            if (Math.abs(roll) > 0.1) {
+                                                // The steeper the bank angle, the more we need to pull up to maintain altitude
+                                                const bankCorrection = Math.abs(roll) * 0.3;
+                                                movementDirection.y += bankCorrection;
+                                            }
+                                            
+                                            // Make roll also affect forward/back direction slightly
+                                            // This simulates how banking an aircraft affects its flight path in a curve
+                                            if (Math.abs(roll) > 0.2) {
+                                                const rollMagnitude = Math.abs(roll);
+                                                // Roll also slightly affects forward movement
+                                                movementDirection.z -= (rollMagnitude - 0.2) * 0.3;
+                                            }
+                                            
+                                            // Add a bit of natural lift/drag simulation
+                                            // Slight upward tendency unless pitched down strongly
+                                            if (pitch > -0.3) {
+                                                movementDirection.y += 0.05;
+                                            }
+                                            
+                                            // Normalize the direction
+                                            movementDirection.normalize();
+                                            
+                                            // Get throttle value - how far the controller is tilted forward
+                                            // More forward tilt (negative pitch) gives more throttle
+                                            // Limited to a reasonable range
+                                            let throttle = cameraMovementSpeed;
+                                            if (pitch < 0) {
+                                                // Forward tilt increases speed (up to 2x speed at full forward tilt)
+                                                throttle = cameraMovementSpeed * (1 + Math.min(Math.abs(pitch), 1));
+                                            } else {
+                                                // Backward tilt reduces speed (down to 0.5x speed at full backward tilt)
+                                                throttle = cameraMovementSpeed * (1 - Math.min(pitch * 0.5, 0.5));
+                                            }
+                                            
+                                            // Move the camera without rotating it
                                             xrCamera.position.addInPlace(
-                                                controllerDirection.scale(cameraMovementSpeed)
+                                                movementDirection.scale(throttle)
                                             );
                                             
                                             // Safety limits: prevent going below ground level
