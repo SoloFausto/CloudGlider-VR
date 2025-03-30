@@ -135,304 +135,401 @@
                 });
 
                 // Create start button that will be visible in VR
-                xr.baseExperience.onStateChangedObservable.add((state) => {
-                    if (state === BABYLON.WebXRState.IN_XR) {
-                        // Create button when VR session starts
-                        const startButtonPlane = BABYLON.MeshBuilder.CreatePlane("startButton", {width: 1, height: 0.5}, scene);
-                        startButtonPlane.position = new BABYLON.Vector3(0, 1, -8); // Better position in front of user
-                        
-                        // Create a dark gray material for the button
-                        const buttonMaterial = new BABYLON.StandardMaterial("buttonMaterial", scene);
-                        buttonMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2); // Dark gray
-                        buttonMaterial.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Subtle glow
-                        buttonMaterial.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3); // More prominent specular
-                        startButtonPlane.material = buttonMaterial;
-                        
-                        // Add text to the button
-                        const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(startButtonPlane);
-                        
-                        // Create a dark gray background rectangle
-                        const backgroundRect = new BABYLON.GUI.Rectangle();
-                        backgroundRect.width = 0.9;
-                        backgroundRect.height = 0.8;
-                        backgroundRect.cornerRadius = 20;
-                        backgroundRect.color = "white";
-                        backgroundRect.thickness = 2;
-                        backgroundRect.background = "#333333"; // Dark gray background
-                        advancedTexture.addControl(backgroundRect);
-                        
-                        const buttonText = new BABYLON.GUI.TextBlock();
-                        buttonText.text = "START GAME";
-                        buttonText.color = "white";
-                        buttonText.fontSize = 160; // Even larger font
-                        buttonText.outlineWidth = 3; // Thicker outline
-                        buttonText.outlineColor = "black";
-                        advancedTexture.addControl(buttonText);
-                        
-                        // Create button animation to make it more noticeable
-                        const frameRate = 30;
-                        const easingFunction = new BABYLON.SineEase();
-                        easingFunction.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
-                        
-                        const scaleAnim = new BABYLON.Animation("buttonScale", "scaling", frameRate, 
-                            BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-                        
-                        const keyFrames = []; 
-                        keyFrames.push({frame: 0, value: new BABYLON.Vector3(1, 1, 1)});
-                        keyFrames.push({frame: frameRate, value: new BABYLON.Vector3(1.1, 1.1, 1.1)});
-                        keyFrames.push({frame: 2 * frameRate, value: new BABYLON.Vector3(1, 1, 1)});
-                        
-                        scaleAnim.setKeys(keyFrames);
-                        scaleAnim.setEasingFunction(easingFunction);
-                        startButtonPlane.animations = [scaleAnim];
-                        scene.beginAnimation(startButtonPlane, 0, 2 * frameRate, true);
-                        
-                        // Function to load the airplane
-                        const loadAirplane = () => {
-                            if (gameStarted) return; // Don't load again if already started
-                            
-                            gameStarted = true;
-                            buttonMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5); // Gray out the button
-                            buttonText.text = "GAME STARTED";
-                            
-                            // Stop the animation
-                            scene.stopAnimation(startButtonPlane);
-                            startButtonPlane.dispose();
-                            
-                            // Load the airplane model
-                            BABYLON.SceneLoader.ImportMesh("", "resources/airplane/", "airplane.obj", scene, function (meshes) {
-                                // Assume the first mesh is the main airplane body
-                                airplaneRoot = meshes[0];
-                                airplaneRoot.scaling = new BABYLON.Vector3(0.0004, 0.0004, 0.0004); // Apply scaling to the root
-                                airplaneRoot.castShadows = false; // Disable shadows for the root
+                const startButtonPlane = BABYLON.MeshBuilder.CreatePlane("startButton", {width: 1, height: 0.5}, scene);
+                startButtonPlane.position = new BABYLON.Vector3(0, 1, -8); // Better position in front of user
+                
+                // Create a dark gray material for the button
+                const buttonMaterial = new BABYLON.StandardMaterial("buttonMaterial", scene);
+                buttonMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2); // Dark gray
+                buttonMaterial.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Subtle glow
+                buttonMaterial.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3); // More prominent specular
+                startButtonPlane.material = buttonMaterial;
+                
+                // Add text to the button
+                const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(startButtonPlane);
+                
+                // Create a dark gray background rectangle
+                const backgroundRect = new BABYLON.GUI.Rectangle();
+                backgroundRect.width = 0.9;
+                backgroundRect.height = 0.8;
+                backgroundRect.cornerRadius = 20;
+                backgroundRect.color = "white";
+                backgroundRect.thickness = 2;
+                backgroundRect.background = "#333333"; // Dark gray background
+                advancedTexture.addControl(backgroundRect);
+                
+                const buttonText = new BABYLON.GUI.TextBlock();
+                buttonText.text = "START GAME";
+                buttonText.color = "white";
+                buttonText.fontSize = 160; // Even larger font
+                buttonText.outlineWidth = 3; // Thicker outline
+                buttonText.outlineColor = "black";
+                advancedTexture.addControl(buttonText);
+                
+                // Create button animation to make it more noticeable
+                const frameRate = 30;
+                const easingFunction = new BABYLON.SineEase();
+                easingFunction.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+                
+                const scaleAnim = new BABYLON.Animation("buttonScale", "scaling", frameRate, 
+                    BABYLON.Animation.ANIMATIONTYPE_VECTOR3, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+                
+                const keyFrames = []; 
+                keyFrames.push({frame: 0, value: new BABYLON.Vector3(1, 1, 1)});
+                keyFrames.push({frame: frameRate, value: new BABYLON.Vector3(1.1, 1.1, 1.1)});
+                keyFrames.push({frame: 2 * frameRate, value: new BABYLON.Vector3(1, 1, 1)});
+                
+                scaleAnim.setKeys(keyFrames);
+                scaleAnim.setEasingFunction(easingFunction);
+                startButtonPlane.animations = [scaleAnim];
+                scene.beginAnimation(startButtonPlane, 0, 2 * frameRate, true);
+                
+                // Function to load the airplane and obstacles
+                const loadAirplane = () => {
+                    if (gameStarted) return; // Don't load again if already started
+                    
+                    gameStarted = true;
+                    buttonMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5); // Gray out the button
+                    buttonText.text = "GAME STARTED";
+                    
+                    // Stop the animation
+                    scene.stopAnimation(startButtonPlane);
+                    startButtonPlane.dispose();
+                    
+                    // Define obstacle types and their properties
+                    const obstacleTypes = [
+                        { name: "aro", path: "resources/obstacles/aro.obj", scale: 0.05, count: 200 }, // Scale reduced by 10x
+                        { name: "poste", path: "resources/obstacles/poste.obj", scale: 0.1, count: 300 }, // Scale reduced by 10x  
+                        { name: "valla", path: "resources/obstacles/valla.obj", scale: 0.08, count: 150 } // Scale reduced by 10x
+                    ];
+                    const obstaclePrototypes = {}; // To store loaded prototypes
 
-                                // Set the rotation offsets in degrees for all three axes
-                                const rotationOffsetX = 90; // Rotation around X-axis (pitch)
-                                const rotationOffsetY = 180;  // Rotation around Y-axis (yaw)
-                                const rotationOffsetZ = 90;  // Rotation around Z-axis (roll)
-                                
-                                // Create a custom material for the airplane body
-                                const airplaneMaterial = new BABYLON.StandardMaterial("airplaneMaterial", scene);
-                                airplaneMaterial.diffuseTexture = new BABYLON.Texture("resources/airplane/blue_airplane_texture.jpg", scene);
-                                airplaneMaterial.specularColor = new BABYLON.Color3(1.2, 1.2, 1.2);
-                                airplaneMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-                                airplaneMaterial.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+                    // Function to place obstacles
+                    const placeObstacles = () => {
+                        const placementArea = 4000; // Size of the area to place obstacles
+                        const groundLevel = 0; // Base Y position for obstacles
 
-                                // Create a custom material for the windows
-                                const windowMaterial = new BABYLON.StandardMaterial("windowMaterial", scene);
-                                windowMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.7, 1.0); // Light blue color
-                                windowMaterial.alpha = 0.7; // Make windows slightly transparent
-                                windowMaterial.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8); // Add some reflectivity
-
-                                // Apply material and settings to all loaded meshes
-                                meshes.forEach(mesh => {
-                                    mesh.castShadows = false; // Disable shadows for all parts
-                                    if (mesh === airplaneRoot) {
-                                        mesh.material = airplaneMaterial; // Apply body material to the root
-                                    } else {
-                                        mesh.material = windowMaterial; // Apply window material to other parts
-                                        mesh.parent = airplaneRoot; // Parent child meshes to the root
-                                    }
-                                });
-                                
-                                // Set up hand tracking for the root mesh
-                                const controllerTracker = scene.onBeforeRenderObservable.add(() => {
-                                    // Look for the right controller
-                                    const rightController = xr.input.controllers.find(
-                                        controller => controller.inputSource.handedness === 'right'
-                                    );
-                                    
-                                    // If we have both the controller and the airplane
-                                    if (rightController && rightController.pointer && airplaneRoot) {
-                                        // Update position of the root mesh
-                                        airplaneRoot.position = rightController.pointer.position;
-                                        
-                                        // Update rotation of the root mesh
-                                        if (rightController.pointer.rotationQuaternion) {
-                                            // Create a new quaternion to avoid reference issues
-                                            airplaneRoot.rotationQuaternion = rightController.pointer.rotationQuaternion.clone();
-                                            
-                                            // Add rotations around all three axes
-                                            const rotationX = BABYLON.Quaternion.RotationAxis(
-                                                BABYLON.Vector3.Right(),
-                                                BABYLON.Tools.ToRadians(rotationOffsetX)
-                                            );
-                                            const rotationY = BABYLON.Quaternion.RotationAxis(
-                                                BABYLON.Vector3.Up(),
-                                                BABYLON.Tools.ToRadians(rotationOffsetY)
-                                            );
-                                            const rotationZ = BABYLON.Quaternion.RotationAxis(
-                                                BABYLON.Vector3.Forward(),
-                                                BABYLON.Tools.ToRadians(rotationOffsetZ)
-                                            );
-                                            
-                                            // Combine all rotations
-                                            airplaneRoot.rotationQuaternion = airplaneRoot.rotationQuaternion
-                                                .multiply(rotationX)
-                                                .multiply(rotationY)
-                                                .multiply(rotationZ);
-                                        }
-
-                                        // --- Pinch Detection ---
-                                        // Check if the game has started before checking for pinch
-                                        if (gameStarted && rightController.inputSource.gamepad) {
-                                            // Check for pinch gesture (assuming 'select' action - button index 0 - corresponds to pinch)
-                                            const pinchButton = rightController.inputSource.gamepad.buttons[0]; 
-                                            if (pinchButton && pinchButton.pressed) {
-                                                console.log("Right hand pinching!");
-                                            }
-                                        }
-                                        // --- End Pinch Detection ---
-                                    }
-                                });
-
-                                // Add camera movement based on hand direction
-                                const cameraMovementSpeed = 2; // Adjust speed as needed
-                                const cameraMovement = scene.onBeforeRenderObservable.add(() => {
-                                    // Only move camera if game has started
-                                    if (!gameStarted) return;
-                                    
-                                    // Look for the right controller (same as airplane control)
-                                    const rightController = xr.input.controllers.find(
-                                        controller => controller.inputSource.handedness === 'right'
-                                    );
-                                    
-                                    if (rightController && rightController.pointer) {
-                                        if (rightController.pointer.rotationQuaternion) {
-                                            // Get the current camera position from the XR camera
-                                            const xrCamera = xr.baseExperience.camera;
-                                            
-                                            // Create a temporary matrix to extract Euler angles
-                                            const tempMatrix = new BABYLON.Matrix();
-                                            rightController.pointer.rotationQuaternion.toRotationMatrix(tempMatrix);
-                                            const rotation = BABYLON.Vector3.Zero();
-                                            tempMatrix.decompose(BABYLON.Vector3.Zero(), rotation);
-                                            
-                                            // Extract pitch, yaw, roll in radians
-                                            const pitch = rotation.x; // X rotation (up/down)
-                                            const yaw = rotation.y;   // Y rotation (left/right)
-                                            const roll = rotation.z;  // Z rotation (banking)
-                                            
-                                            // Create movement direction based on hand orientation
-                                            // Forward direction is always present (constant forward movement)
-                                            const forwardVector = new BABYLON.Vector3(0, 0, 1);
-                                            const forwardDirection = new BABYLON.Vector3();
-                                            forwardVector.rotateByQuaternionToRef(
-                                                rightController.pointer.rotationQuaternion,
-                                                forwardDirection
-                                            );
-                                            
-                                            // Calculate movement vector based on plane physics:
-                                            // 1. Pitch controls up/down movement
-                                            // 2. Yaw controls left/right turning
-                                            // 3. Roll (banking) influences turning
-                                            
-                                            // Calculate final movement direction
-                                            // Start with forward movement
-                                            const movementDirection = forwardDirection.clone();
-                                            
-                                            // Apply pitch influence (up/down)
-                                            // Pitch forward (negative) moves down, pitch back (positive) moves up
-                                            movementDirection.y += Math.sin(pitch) * 0.8;
-                                            
-                                            // Apply yaw influence (left/right turning)
-                                            // Direct yaw influence
-                                            const yawFactor = Math.sin(yaw) * 0.4;
-                                            movementDirection.x += yawFactor;
-                                            
-                                            // Apply roll influence (banking causes turning)
-                                            // Banking left (negative roll) turns left, banking right (positive roll) turns right
-                                            // Make roll the primary turning mechanism, with a stronger influence
-                                            // Use a non-linear response curve for more natural control
-                                            let rollResponse;
-                                            if (Math.abs(roll) < 0.3) {
-                                                // More sensitive at small angles for fine control
-                                                rollResponse = roll * 2.5;
-                                            } else {
-                                                // Gradually less sensitive at larger angles to prevent over-control
-                                                const direction = Math.sign(roll);
-                                                rollResponse = direction * (0.75 + Math.min(Math.abs(roll), 1.5) * 0.5);
-                                            }
-                                            const rollFactor = -rollResponse * 1.5;
-                                            movementDirection.x += rollFactor;
-                                            
-                                            // Apply coordinated turn physics - banking affects vertical movement
-                                            // When banking, we need to pull up slightly to maintain altitude in a turn
-                                            // This simulates how pilots handle coordinated turns
-                                            if (Math.abs(roll) > 0.1) {
-                                                // The steeper the bank angle, the more we need to pull up to maintain altitude
-                                                const bankCorrection = Math.abs(roll) * 0.3;
-                                                movementDirection.y += bankCorrection;
-                                            }
-                                            
-                                            // Make roll also affect forward/back direction slightly
-                                            // This simulates how banking an aircraft affects its flight path in a curve
-                                            if (Math.abs(roll) > 0.2) {
-                                                const rollMagnitude = Math.abs(roll);
-                                                // Roll also slightly affects forward movement
-                                                movementDirection.z -= (rollMagnitude - 0.2) * 0.3;
-                                            }
-                                            
-                                            // Add a bit of natural lift/drag simulation
-                                            // Slight upward tendency unless pitched down strongly
-                                            if (pitch > -0.3) {
-                                                movementDirection.y += 0.05;
-                                            }
-                                            
-                                            // Normalize the direction
-                                            movementDirection.normalize();
-                                            
-                                            // Get throttle value - how far the controller is tilted forward
-                                            // More forward tilt (negative pitch) gives more throttle
-                                            // Limited to a reasonable range
-                                            let throttle = cameraMovementSpeed;
-                                            if (pitch < 0) {
-                                                // Forward tilt increases speed (up to 2x speed at full forward tilt)
-                                                throttle = cameraMovementSpeed * (1 + Math.min(Math.abs(pitch), 1));
-                                            } else {
-                                                // Backward tilt reduces speed (down to 0.5x speed at full backward tilt)
-                                                throttle = cameraMovementSpeed * (1 - Math.min(pitch * 0.5, 0.5));
-                                            }
-                                            
-                                            // Move the camera without rotating it
-                                            xrCamera.position.addInPlace(
-                                                movementDirection.scale(throttle)
-                                            );
-                                            
-                                            // Safety limits: prevent going below ground level
-                                            const minimumHeight = 1.0; // Minimum height above ground
-                                            if (xrCamera.position.y < minimumHeight) {
-                                                xrCamera.position.y = minimumHeight;
-                                            }
-                                        }
-                                    }
-                                });
-
-                                // Remove both observers when the scene disposes
-                                scene.onDisposeObservable.add(() => {
-                                    if (controllerTracker) {
-                                        scene.onBeforeRenderObservable.remove(controllerTracker);
-                                    }
-                                    if (cameraMovement) {
-                                        scene.onBeforeRenderObservable.remove(cameraMovement);
-                                    }
-                                });
-                            });
+                        // Define height adjustments for specific obstacle types
+                        const heightAdjustments = {
+                            "aro": 18,     // Aros will be placed 50 units above ground
+                            "valla": 18,   // Vallas will be placed 30 units above ground
+                            "poste": 0     // Postes remain at ground level
                         };
+
+                        obstacleTypes.forEach(type => {
+                            const prototype = obstaclePrototypes[type.name];
+                            if (!prototype) return; // Skip if prototype wasn't loaded
+
+                            // Get the height adjustment for this type (default to 0 if not specified)
+                            const heightAdjustment = heightAdjustments[type.name] || 0;
+
+                            for (let i = 0; i < type.count; i++) {
+                                const obstacleInstance = prototype.clone(`${type.name}_${i}`);
+                                if (!obstacleInstance) continue; // Check if cloning worked
+
+                                // Random position with adjusted height
+                                const posX = Math.random() * placementArea - placementArea / 2;
+                                const posZ = Math.random() * placementArea - placementArea / 2;
+                                const posY = groundLevel + heightAdjustment;
+                                obstacleInstance.position = new BABYLON.Vector3(posX, posY, posZ);
+
+                                // Reset any quaternion rotation
+                                obstacleInstance.rotationQuaternion = null;
+                                
+                                // Apply rotation to make objects stand upright
+                                obstacleInstance.rotation = new BABYLON.Vector3(-Math.PI/2, Math.random() * Math.PI * 2, 0);
+
+                                // Make visible
+                                obstacleInstance.setEnabled(true);
+
+                                // Apply scaling
+                                obstacleInstance.scaling.setAll(type.scale);
+
+                                // Ensure all child meshes are also enabled
+                                obstacleInstance.getChildMeshes().forEach(child => {
+                                    child.setEnabled(true);
+                                });
+                            }
+                        });
+                    };
+
+                    // Track loading progress
+                    let airplaneLoaded = false;
+                    let obstaclesLoadedCount = 0;
+                    const totalObstacleTypes = obstacleTypes.length;
+
+                    // Function to check if all assets are loaded
+                    const checkAssetsAndStart = () => {
+                        if (airplaneLoaded && obstaclesLoadedCount === totalObstacleTypes) {
+                            console.log("All assets loaded, placing obstacles");
+                            placeObstacles();
+                        }
+                    };
+
+                    // Load the airplane model
+                    BABYLON.SceneLoader.ImportMesh("", "resources/airplane/", "airplane.obj", scene, function (meshes) {
+                        // Assume the first mesh is the main airplane body
+                        airplaneRoot = meshes[0];
+                        airplaneRoot.scaling = new BABYLON.Vector3(0.0004, 0.0004, 0.0004); // Apply scaling to the root
+                        airplaneRoot.castShadows = false; // Disable shadows for the root
+
+                        // Set the rotation offsets in degrees for all three axes
+                        const rotationOffsetX = 90; // Rotation around X-axis (pitch)
+                        const rotationOffsetY = 180;  // Rotation around Y-axis (yaw)
+                        const rotationOffsetZ = 90;  // Rotation around Z-axis (roll)
                         
-                        // Set up Near Interaction
-                        startButtonPlane.isPickable = true;
-                        
-                        // Add interactions to the button (for VR controllers)
-                        startButtonPlane.actionManager = new BABYLON.ActionManager(scene);
-                        startButtonPlane.actionManager.registerAction(
-                            new BABYLON.ExecuteCodeAction(
-                                BABYLON.ActionManager.OnPickTrigger,
-                                loadAirplane
-                            )
-                        );
-                    }
-                });
+                        // Create a custom material for the airplane body
+                        const airplaneMaterial = new BABYLON.StandardMaterial("airplaneMaterial", scene);
+                        airplaneMaterial.diffuseTexture = new BABYLON.Texture("resources/airplane/blue_airplane_texture.jpg", scene);
+                        airplaneMaterial.specularColor = new BABYLON.Color3(1.2, 1.2, 1.2);
+                        airplaneMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+                        airplaneMaterial.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+
+                        // Create a custom material for the windows
+                        const windowMaterial = new BABYLON.StandardMaterial("windowMaterial", scene);
+                        windowMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.7, 1.0); // Light blue color
+                        windowMaterial.alpha = 0.7; // Make windows slightly transparent
+                        windowMaterial.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8); // Add some reflectivity
+
+                        // Apply material and settings to all loaded meshes
+                        meshes.forEach(mesh => {
+                            mesh.castShadows = false; // Disable shadows for all parts
+                            if (mesh === airplaneRoot) {
+                                mesh.material = airplaneMaterial; // Apply body material to the root
+                            } else {
+                                mesh.material = windowMaterial; // Apply window material to other parts
+                                mesh.parent = airplaneRoot; // Parent child meshes to the root
+                            }
+                        });
+
+                        console.log("Airplane loaded");
+                        airplaneLoaded = true;
+                        checkAssetsAndStart();
+
+                        // Set up hand tracking for the root mesh
+                        const controllerTracker = scene.onBeforeRenderObservable.add(() => {
+                            // Look for the right controller
+                            const rightController = xr.input.controllers.find(
+                                controller => controller.inputSource.handedness === 'right'
+                            );
+                            
+                            // If we have both the controller and the airplane
+                            if (rightController && rightController.pointer && airplaneRoot) {
+                                // Update position of the root mesh
+                                airplaneRoot.position = rightController.pointer.position;
+                                
+                                // Update rotation of the root mesh
+                                if (rightController.pointer.rotationQuaternion) {
+                                    // Create a new quaternion to avoid reference issues
+                                    airplaneRoot.rotationQuaternion = rightController.pointer.rotationQuaternion.clone();
+                                    
+                                    // Add rotations around all three axes
+                                    const rotationX = BABYLON.Quaternion.RotationAxis(
+                                        BABYLON.Vector3.Right(),
+                                        BABYLON.Tools.ToRadians(rotationOffsetX)
+                                    );
+                                    const rotationY = BABYLON.Quaternion.RotationAxis(
+                                        BABYLON.Vector3.Up(),
+                                        BABYLON.Tools.ToRadians(rotationOffsetY)
+                                    );
+                                    const rotationZ = BABYLON.Quaternion.RotationAxis(
+                                        BABYLON.Vector3.Forward(),
+                                        BABYLON.Tools.ToRadians(rotationOffsetZ)
+                                    );
+                                    
+                                    // Combine all rotations
+                                    airplaneRoot.rotationQuaternion = airplaneRoot.rotationQuaternion
+                                        .multiply(rotationX)
+                                        .multiply(rotationY)
+                                        .multiply(rotationZ);
+                                }
+
+                                // --- Pinch Detection ---
+                                // Check if the game has started before checking for pinch
+                                if (gameStarted && rightController.inputSource.gamepad) {
+                                    // Check for pinch gesture (assuming 'select' action - button index 0 - corresponds to pinch)
+                                    const pinchButton = rightController.inputSource.gamepad.buttons[0]; 
+                                    if (pinchButton && pinchButton.pressed) {
+                                        console.log("Right hand pinching!");
+                                    }
+                                }
+                                // --- End Pinch Detection ---
+                            }
+                        });
+
+                        // Add camera movement based on hand direction
+                        const cameraMovementSpeed = 2; // Adjust speed as needed
+                        const cameraMovement = scene.onBeforeRenderObservable.add(() => {
+                            // Only move camera if game has started
+                            if (!gameStarted) return;
+                            
+                            // Look for the right controller (same as airplane control)
+                            const rightController = xr.input.controllers.find(
+                                controller => controller.inputSource.handedness === 'right'
+                            );
+                            
+                            if (rightController && rightController.pointer) {
+                                if (rightController.pointer.rotationQuaternion) {
+                                    // Get the current camera position from the XR camera
+                                    const xrCamera = xr.baseExperience.camera;
+                                    
+                                    // Create a temporary matrix to extract Euler angles
+                                    const tempMatrix = new BABYLON.Matrix();
+                                    rightController.pointer.rotationQuaternion.toRotationMatrix(tempMatrix);
+                                    const rotation = BABYLON.Vector3.Zero();
+                                    tempMatrix.decompose(BABYLON.Vector3.Zero(), rotation);
+                                    
+                                    // Extract pitch, yaw, roll in radians
+                                    const pitch = rotation.x; // X rotation (up/down)
+                                    const yaw = rotation.y;   // Y rotation (left/right)
+                                    const roll = rotation.z;  // Z rotation (banking)
+                                    
+                                    // Create movement direction based on hand orientation
+                                    // Forward direction is always present (constant forward movement)
+                                    const forwardVector = new BABYLON.Vector3(0, 0, 1);
+                                    const forwardDirection = new BABYLON.Vector3();
+                                    forwardVector.rotateByQuaternionToRef(
+                                        rightController.pointer.rotationQuaternion,
+                                        forwardDirection
+                                    );
+                                    
+                                    // Calculate movement vector based on plane physics:
+                                    // 1. Pitch controls up/down movement
+                                    // 2. Yaw controls left/right turning
+                                    // 3. Roll (banking) influences turning
+                                    
+                                    // Calculate final movement direction
+                                    // Start with forward movement
+                                    const movementDirection = forwardDirection.clone();
+                                    
+                                    // Apply pitch influence (up/down)
+                                    // Pitch forward (negative) moves down, pitch back (positive) moves up
+                                    movementDirection.y += Math.sin(pitch) * 0.8;
+                                    
+                                    // Apply yaw influence (left/right turning)
+                                    // Direct yaw influence
+                                    const yawFactor = Math.sin(yaw) * 0.4;
+                                    movementDirection.x += yawFactor;
+                                    
+                                    // Apply roll influence (banking causes turning)
+                                    // Banking left (negative roll) turns left, banking right (positive roll) turns right
+                                    // Make roll the primary turning mechanism, with a stronger influence
+                                    // Use a non-linear response curve for more natural control
+                                    let rollResponse;
+                                    if (Math.abs(roll) < 0.3) {
+                                        // More sensitive at small angles for fine control
+                                        rollResponse = roll * 2.5;
+                                    } else {
+                                        // Gradually less sensitive at larger angles to prevent over-control
+                                        const direction = Math.sign(roll);
+                                        rollResponse = direction * (0.75 + Math.min(Math.abs(roll), 1.5) * 0.5);
+                                    }
+                                    const rollFactor = -rollResponse * 1.5;
+                                    movementDirection.x += rollFactor;
+                                    
+                                    // Apply coordinated turn physics - banking affects vertical movement
+                                    // When banking, we need to pull up slightly to maintain altitude in a turn
+                                    // This simulates how pilots handle coordinated turns
+                                    if (Math.abs(roll) > 0.1) {
+                                        // The steeper the bank angle, the more we need to pull up to maintain altitude
+                                        const bankCorrection = Math.abs(roll) * 0.3;
+                                        movementDirection.y += bankCorrection;
+                                    }
+                                    
+                                    // Make roll also affect forward/back direction slightly
+                                    // This simulates how banking an aircraft affects its flight path in a curve
+                                    if (Math.abs(roll) > 0.2) {
+                                        const rollMagnitude = Math.abs(roll);
+                                        // Roll also slightly affects forward movement
+                                        movementDirection.z -= (rollMagnitude - 0.2) * 0.3;
+                                    }
+                                    
+                                    // Add a bit of natural lift/drag simulation
+                                    // Slight upward tendency unless pitched down strongly
+                                    if (pitch > -0.3) {
+                                        movementDirection.y += 0.05;
+                                    }
+                                    
+                                    // Normalize the direction
+                                    movementDirection.normalize();
+                                    
+                                    // Get throttle value - how far the controller is tilted forward
+                                    // More forward tilt (negative pitch) gives more throttle
+                                    // Limited to a reasonable range
+                                    let throttle = cameraMovementSpeed;
+                                    if (pitch < 0) {
+                                        // Forward tilt increases speed (up to 2x speed at full forward tilt)
+                                        throttle = cameraMovementSpeed * (1 + Math.min(Math.abs(pitch), 1));
+                                    } else {
+                                        // Backward tilt reduces speed (down to 0.5x speed at full backward tilt)
+                                        throttle = cameraMovementSpeed * (1 - Math.min(pitch * 0.5, 0.5));
+                                    }
+                                    
+                                    // Move the camera without rotating it
+                                    xrCamera.position.addInPlace(
+                                        movementDirection.scale(throttle)
+                                    );
+                                    
+                                    // Safety limits: prevent going below ground level
+                                    const minimumHeight = 1.0; // Minimum height above ground
+                                    if (xrCamera.position.y < minimumHeight) {
+                                        xrCamera.position.y = minimumHeight;
+                                    }
+                                }
+                            }
+                        });
+
+                        // Remove both observers when the scene disposes
+                        scene.onDisposeObservable.add(() => {
+                            if (controllerTracker) {
+                                scene.onBeforeRenderObservable.remove(controllerTracker);
+                            }
+                            if (cameraMovement) {
+                                scene.onBeforeRenderObservable.remove(cameraMovement);
+                            }
+                        });
+                    });
+
+                    // Load obstacle prototypes
+                    obstacleTypes.forEach(type => {
+                        BABYLON.SceneLoader.ImportMesh("", "", type.path, scene, function (meshes) {
+                            if (meshes.length > 0) {
+                                const rootMesh = meshes[0];
+                                // Parent all other meshes to the root if the model is complex
+                                for(let i = 1; i < meshes.length; i++){
+                                    meshes[i].parent = rootMesh;
+                                }
+                                obstaclePrototypes[type.name] = rootMesh;
+                                rootMesh.setEnabled(false); // Keep prototype hidden
+                                obstaclesLoadedCount++;
+                                console.log(`Obstacle type "${type.name}" loaded`);
+                                checkAssetsAndStart(); // Check if all assets are loaded
+                            } else {
+                                console.error(`Failed to load obstacle: ${type.path}`);
+                                // Handle error case - perhaps increment count anyway or use a placeholder?
+                                obstaclesLoadedCount++;
+                                checkAssetsAndStart();
+                            }
+                        }, null, function (scene, message, exception) {
+                            console.error(`Error loading obstacle ${type.path}: ${message}`, exception);
+                            // Handle loading error - increment count to prevent blocking game start
+                            obstaclesLoadedCount++;
+                            checkAssetsAndStart();
+                        });
+                    });
+                };
+                
+                // Set up Near Interaction
+                startButtonPlane.isPickable = true;
+                
+                // Add interactions to the button (for VR controllers)
+                startButtonPlane.actionManager = new BABYLON.ActionManager(scene);
+                startButtonPlane.actionManager.registerAction(
+                    new BABYLON.ExecuteCodeAction(
+                        BABYLON.ActionManager.OnPickTrigger,
+                        loadAirplane
+                    )
+                );
             });
 
             return scene;
