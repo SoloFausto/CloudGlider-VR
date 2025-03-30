@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Babylon.js VR Scene</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #renderCanvas { width: 100vw; height: 100vh; display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('renderCanvas');
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const createScene = function() {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color3(0.7, 0.8, 1); // Blue sky
+
+            // Camera
+            const camera = new BABYLON.UniversalCamera("UniversalCamera", new BABYLON.Vector3(0, 5, -10), scene);
+            camera.setTarget(BABYLON.Vector3.Zero());
+            camera.attachControl(canvas, true);
+
+            // Enable fog in the scene
+            scene.fogMode = BABYLON.Scene.FOGMODE_EXP2; // Exponential squared fog
+            scene.fogColor = new BABYLON.Color3(0.7, 0.8, 1); // Match the sky color
+            scene.fogDensity = 0.0002; // Adjust density for the desired effect
+
+
+            // Light
+            const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+            light.intensity = 0.7;
+
+            // Add a directional light to simulate sunlight
+            const directionalLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -2, -1), scene);
+            directionalLight.position = new BABYLON.Vector3(50, 100, 50);
+            directionalLight.intensity = 1.0;
+
+            // Ground (infinite plane)
+            const ground = BABYLON.Mesh.CreatePlane("ground", 10000, scene); // Make it very large
+            ground.rotation.x = Math.PI / 2;
+
+            // Ground Material
+            const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
+            groundMaterial.diffuseColor = new BABYLON.Color3(0, 0.8, 0); // Green
+            // groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0); // Remove specular highlights
+            groundMaterial.backFaceCulling = false; // Ensure both sides are rendered
+            ground.material = groundMaterial;
+
+            // Ensure the ground receives light
+            ground.receiveShadows = true;
+
+            // Sun (a simple sphere)
+            const sun = BABYLON.Mesh.CreateSphere("sun", 320, 200, scene);
+            sun.position = new BABYLON.Vector3(1000, 1000, 0);
+            const sunMaterial = new BABYLON.StandardMaterial("sunMaterial", scene);
+            sunMaterial.emissiveColor = new BABYLON.Color3(1, 1, 0); // Yellow
+            sun.material = sunMaterial;
+            light.includedOnlyMeshes.push(sun); // Ensure the sun casts light
+
+           // Clouds (using points and billboards for simplicity)
+            const cloudPoints = [];
+            const numClouds = 500;
+
+            for (let i = 0; i < numClouds; i++) {
+                cloudPoints.push({
+                    position: new BABYLON.Vector3(
+                        Math.random() * 5000 - 2500, // x (spread clouds across a wider range)
+                        Math.random() * 300 + 200,  // y (adjust height range)
+                        Math.random() * 5000 - 2500 // z (spread clouds across a wider range)
+                    ),
+                    size: Math.random() * 100 + 50, // Increased size range
+                });
+            }
+
+            const cloudGeometry = BABYLON.Mesh.CreatePlane("cloud", 1, scene, false, BABYLON.Mesh.DOUBLESIDE);
+            cloudGeometry.visibility = 0;
+
+            for (let i = 0; i < numClouds; i++) {
+                const cloud = cloudGeometry.clone("cloud" + i); // Use clone instead of createInstance
+                cloud.position = cloudPoints[i].position;
+                cloud.scaling = new BABYLON.Vector3(cloudPoints[i].size, cloudPoints[i].size, cloudPoints[i].size);
+                cloud.rotation.x = Math.PI / 2;
+                cloud.visibility = 1; // Ensure the cloud is visible
+
+                const cloudMaterial = new BABYLON.StandardMaterial("cloudMaterial" + i, scene);
+                cloudMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1); // Bright white color
+                cloudMaterial.alpha = 0.5; // Adjust transparency
+                cloudMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; // Enable alpha blending
+                cloudMaterial.backFaceCulling = false; // Render both sides of the plane
+                cloud.material = cloudMaterial;
+            }
+
+            // WebXR Default Experience
+            BABYLON.WebXRDefaultExperience.CreateAsync(scene).then((xr) => {
+                console.log("WebXR enabled");
+            });
+
+            return scene;
+        };
+
+        const scene = createScene();
+
+        engine.runRenderLoop(() => {
+            scene.render();
+        });
+
+        window.addEventListener('resize', () => {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
